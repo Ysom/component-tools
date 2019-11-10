@@ -1,0 +1,261 @@
+<script type="text/jsx">
+  // 渲染表单
+  function renderForm (h) {
+    if (!this.$slots.form) {
+      return ''
+    }
+    const exportButton = this.exportApi && !this.disabledExport ?
+      <el-button type="info" on-click={this.exportData}><i class="el-icon-document"></i> 导出</el-button> : ''
+    return (
+      <div class="easy-page-form">
+        <el-form inline={true} {...{
+          props: {
+            model: this.formData
+          }
+        }}>
+          {this.$slots.form}
+          <el-button type="success" on-click={this.search}><i class="el-icon-search"></i> 查询</el-button>
+          {exportButton}
+        </el-form>
+      </div>
+    )
+  }
+
+  // 渲染按钮工具栏
+  function renderToolbar (h) {
+    return this.$slots.toolbar ?
+      <div class="easy-page-toolbar">{this.$slots.toolbar}</div> : ''
+  }
+
+  // 渲染表格 column
+  function renderTableColumn (h, column, context) {
+    if (column.render && Object.prototype.toString.call(column.render) === '[object Function]') {
+      const slotScope = {
+        scopedSlots: {
+          default: scope => column.render.call(context, h, scope)
+        }
+      }
+      return (
+        <el-table-column
+          type={column.type}
+          label={column.label || ''}
+          prop={column.prop || ''}
+          width={column.prop || ''}
+          fixed={column.fixed || undefined}
+          show-overflow-tooltip={true}>
+          {...slotScope}
+        </el-table-column>
+      )
+    }
+    return (
+      <el-table-column
+          type={column.type}
+          label={column.label || ''}
+          prop={column.prop || ''}
+          width={column.prop || ''}
+          fixed={column.fixed || undefined}
+          show-overflow-tooltip={true}
+          formatter={column.formatter || undefined}
+          selectable={column.selectable}>
+      </el-table-column>
+    )
+  }
+
+  // 渲染表格
+  function renderTable (h) {
+    const table = this.columns.map(item => renderTableColumn(h, item, this.$parent))
+    return (
+      <div class="easy-page-table">
+        <el-table
+          data={this.tableList}
+          stripe
+          border
+          highlight-current-row
+          tooltip-effect="dark"
+          height={this.tableHeight}
+          max-height={this.maxHeight}
+          row-key={this.rowKey}
+          tree-props={this.tableTreeProp}
+          on-select={this.selectItem}
+          on-selection-change={this.selectChange}
+          on-select-all={this.selectAll}>
+          {table}
+        </el-table>
+      </div>
+    )
+  }
+
+  // 渲染分页
+  function renderPagination (h) {
+    return (
+      <div class="easy-page-pagination">
+        <el-pagination
+          layout="total, sizes, prev, pager, next"
+          current-page={this.page}
+          page-size={this.pageSize}
+          page-sizes={this.pageSizes}
+          total={this.total}
+          on-current-change={page => this.page = page}
+          on-size-change={size => this.pageSize = size}>
+        </el-pagination>
+      </div>
+    )
+  }
+
+
+  export default {
+    components: {},
+    props: {
+      // 组件布局 默认插槽、表单、按钮工具栏、表格、分页
+      layout: {
+        type: Array,
+        default () {
+          return ['slot', 'form', 'toolbar', 'table', 'pagination']
+        },
+        require: true
+      },
+      // 表单
+      formData: {
+        type: Object
+      },
+      // 表格数组
+      columns: {
+        type: Array,
+        require: true
+      },
+      tableHeight: {
+        type: String
+      },
+      maxHeight: {
+        type: String
+      },
+      // tree-table唯一标识
+      rowKey: {
+        type: String,
+        default: 'id'
+      },
+      // tree-table以及懒加载
+      tableTreeProp: {
+        type: Object,
+        default () {
+          return {
+            children: 'children',
+            hasChildren: 'hasChildren'
+          }
+        }
+      },
+      pageSizes: {
+        type: Array,
+        default () {
+          return ['10', '20', '30', '40']
+        }
+      },
+      // 请求接口
+      getApi: {
+        type: String,
+        require: true
+      },
+      // 导出接口
+      exportApi: {
+        type: String
+      },
+      // 禁用导出
+      disabledExport: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data () {
+      return {
+        tableList: [],
+        page: 1,
+        pageSize: 10,
+        total: 0
+      }
+    },
+    watch: {
+      page: 'query',
+      pageSize: 'query'
+    },
+    mounted () {
+      this.query()
+    },
+    methods: {
+      // 请求数据
+      query () {
+        if (!this.getApi) {
+          return
+        }
+        let params = {}
+        let isPagination = this.layout.indexOf('pagination') !== -1
+        if (isPagination) {
+          params = {
+            page: this.page,
+            pageSize: this.pageSize,
+            ...this.formData
+          }
+        } else {
+          params = {
+            ...this.formData
+          }
+        }
+        this.$http.get(this.getApi, {params, headers: {loading: true}}).then(res => {
+          // api请求成功的code 根据不同规范去自定义
+          let suc = res.code === '0001'
+          // 分页情况下 多一层data
+          this.tableList = suc ? (isPagination ? res.data.data : res.data) : []
+          this.total = suc ? (isPagination ? res.data.total : res.total) : 0
+          // 将表格数据传递给父组件
+          this.$emit('getTableList', this.tableList)
+        })
+      },
+      // 查询
+      search () {
+        // 页数置为1
+        this.page = 1
+        this.query()
+      },
+      // 导出数据
+      exportData () {},
+      // 表格单选
+      selectItem () {},
+      // 表格选项改变
+      selectChange () {},
+      // 表格全选/取消全选
+      selectAll () {}
+    },
+    render (h) {
+      const MAP = {
+        form: renderForm.call(this, h),
+        toolbar: renderToolbar.call(this, h),
+        table: renderTable.call(this, h),
+        pagination: renderPagination.call(this, h),
+        slot: (<div class="easy-page-slot">
+          {this.$slots.default}
+        </div>)
+      }
+      const map = this.layout.map(item => MAP[item])
+      return (
+        <div class="easy-page">
+          {map}
+        </div>
+      )
+    }
+  }
+</script>
+
+<style>
+.easy-page {
+  padding: 10px 15px;
+}
+.easy-page-toolbar, .easy-page-table, .easy-page-pagination {
+  margin-top: 20px;
+}
+.easy-page-form {
+  padding: 5px;
+  background: #2c3e50;
+}
+.easy-page-pagination {
+  text-align: right;
+}
+</style>
