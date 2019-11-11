@@ -67,6 +67,7 @@
     return (
       <div class="easy-page-table">
         <el-table
+          ref="table"
           data={this.tableList}
           stripe
           border
@@ -144,6 +145,16 @@
           }
         }
       },
+      // 表格是否单选
+      selectLimit: {
+        type: Boolean,
+        default: false
+      },
+      // 查询、翻页时是否清空selection/selectionAll
+      isClear: {
+        type: Boolean,
+        default: false
+      },
       pageSizes: {
         type: Array,
         default () {
@@ -170,7 +181,11 @@
         tableList: [],
         page: 1,
         pageSize: 10,
-        total: 0
+        total: 0,
+        selection: [],
+        selectionInfo: [],
+        selectionAll: [],
+        isSelectAll: false
       }
     },
     watch: {
@@ -207,6 +222,9 @@
           this.total = suc ? (isPagination ? res.data.total : res.total) : 0
           // 将表格数据传递给父组件
           this.$emit('getTableList', this.tableList)
+          if (this.isClear) {
+            this.clearSelect()
+          }
         })
       },
       // 查询
@@ -217,12 +235,117 @@
       },
       // 导出数据
       exportData () {},
-      // 表格单选
-      selectItem () {},
-      // 表格选项改变
-      selectChange () {},
+      // 表格勾选事件
+      selectItem (selection, row) {
+        // 表格单选
+        if (this.selectLimit) {
+          this.tableList.forEach((item) => {
+            this.$refs.table.toggleRowSelection(item, false)
+          })
+          if (selection.length === 0) {
+            this.$refs.table.toggleRowSelection(row, true)
+          }
+          this.selection = [+row.id]
+          this.selectionInfo = [{...row}]
+          if (this.selection.length && +row.id === +this.selection[0]) {
+            this.$refs.table.toggleRowSelection(row, true)
+          }
+        } else {
+          const index = this.selection.indexOf(+row.id)
+          if (index > -1) {
+            this.selection.splice(index, 1)
+            this.selectionInfo.splice(index, 1)
+          } else {
+            this.selection.push(+row.id)
+            this.selectionInfo.push(row)
+          }
+        }
+        this.updateSelect()
+      },
+      // 表格勾选选项改变
+      selectChange (selection) {
+        this.selectionAll = Array.from(new Set([...selection, ...this.selectionAll]))
+      },
       // 表格全选/取消全选
-      selectAll () {}
+      selectAll (selection) {
+        if (this.selectLimit) {
+          this.tableList.forEach((item) => {
+            this.$refs.table.toggleRowSelection(item, false)
+            if (+item.id !== +this.selection[0]) {
+              this.$refs.table.toggleRowSelection(item, false)
+            } else if (this.selection.length && +item.id === +this.selection[0]) {
+              this.$refs.table.toggleRowSelection(item, true)
+            }
+          })
+        } else {
+          if (selection.length === 0) {
+            this.tableList.forEach((item) => {
+              // 树形表格 存在子数据的时候
+              // 现版本2.12.0 树形表格 勾选父数据时子数据不会被勾选 这里手动处理
+              if (item.children) {
+                item.children.forEach(c => {
+                  const index = this.selection.indexOf(+c.id)
+                  if (index > -1) {
+                    this.selection.splice(index, 1)
+                    this.selectionInfo.splice(index, 1)
+                    this.$refs.table.toggleRowSelection(c, false)
+                  }
+                })
+              } else {
+                const index = this.selection.indexOf(+item.id)
+                if (index > -1) {
+                  this.selection.splice(index, 1)
+                  this.selectionInfo.splice(index, 1)
+                  this.$refs.table.toggleRowSelection(item, false)
+                }
+              }
+            })
+            this.isSelectAll = false
+          } else {
+            const idArr = []
+            if (!this.isSelectAll) {
+              this.tableList.forEach(s => {
+                idArr.push(+s.id)
+                this.$refs.table.toggleRowSelection(s, true)
+                if (s.children) {
+                  s.children.forEach(c => {
+                    idArr.push(+c.id)
+                    this.$refs.table.toggleRowSelection(c, true)
+                  })
+                }
+              })
+              this.isSelectAll = true
+            } else {
+              this.tableList.forEach(s => {
+                this.$refs.table.toggleRowSelection(s, false)
+                if (s.children) {
+                  s.children.forEach(c => {
+                    this.$refs.table.toggleRowSelection(c, false)
+                  })
+                }
+              })
+              this.isSelectAll = false
+              this.selection = []
+            }
+            this.selection = Array.from(new Set([...idArr, ...this.selection])).map(item => +item)
+            this.selectionInfo = Array.from(new Set([...selection, ...this.selectionInfo]))
+          }
+        }
+        this.updateSelect()
+      },
+      // 向上传递数据
+      updateSelect () {
+        this.$emit('selectionChange', this.selection, this.selectionInfo)
+        this.$emit('selectionAll', this.selectionAll)
+      },
+      // 重置表格勾选状态
+      clearSelect () {
+        this.selection = []
+        this.selectionInfo = []
+        this.selectionAll = []
+        this.isSelectAll = false
+        this.$emit('selectionChange', this.selection, this.selectionInfo)
+      }
     },
     render (h) {
       const MAP = {

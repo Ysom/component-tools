@@ -45,3 +45,5 @@ export default {
 | maxHeight | 表格最高高度 | String | - | - |
 | rowKey | 树形表格唯一标识 | String | - | id |
 | tableTreeProp | 树形表格及懒加载配置 | Object | - | {children: 'children', hasChildren: 'hasChildren'} |
+| selectLimit | 表格是否单选 | Boolean | - | false |
+| isClear | 翻页、查询时是否清空表格选中状态 | Boolean | - | false |
