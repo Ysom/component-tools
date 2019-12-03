@@ -1,3 +1,5 @@
+import CanvasCompress from 'canvas-compress'
+
 export default {
   data () {
     return {
@@ -46,6 +48,16 @@ export default {
     getFileApi: {
       type: String,
       default: '/admin/getFile'
+    },
+    // 图片是否压缩
+    isCompress: {
+      type: Boolean,
+      default: false
+    },
+    // 未设置图片大小限制时的压缩比
+    compressRadio: {
+      type: Number,
+      default: 0.4
     }
   },
   created () {
@@ -158,6 +170,9 @@ export default {
       if (isLtType && isLtLimit) {
         this.$loading({text: '文件上传中...'})
       }
+      if (this.isCompress && this.fileType === 2) {
+        return Promise.resolve(this.compressHandler(file))
+      }
       return isLtType && isLtLimit
     },
     // 上传成功 回调事件
@@ -221,6 +236,17 @@ export default {
         type: 'warning',
         message: `最多只允许上传 ${this.limit} 个文件`
       })
+    },
+    // 压缩图片
+    async compressHandler (file) {
+      const maxSize = parseInt(this.sizeLimit) / 10 * 1024 * 1024
+      const radio = maxSize / file.size
+      const compressor = new CanvasCompress({
+        type: CanvasCompress.MIME.JPEG,
+        quality: this.sizeLimit ? radio : this.compressRadio
+      })
+      let newFile = await compressor.process(file)
+      return newFile.result.blob
     }
   }
 }
