@@ -31,5 +31,7 @@ export default {
 | params | 上传文件时附带的参数 | Object | - | {} | - |
 | limit | 最多上传文件数 | Number | - | 1 | 0 即无限制 |
 | sizeLimit | 单个文件大小限制 | Number | - | 5 | 5M |
+| isCompress | 是否压缩上传的图片 | Boolean | - | false | 当fileType为2时生效 |
+| compressRadio | 未设置图片大小限制时的图片压缩比 | Number | - | 0.4 | - |
 | action | 上传文件api | String | - | - | - |
 | getFileApi | 获取文件api | String | - | - | - |
