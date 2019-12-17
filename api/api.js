@@ -19,7 +19,7 @@ axios.defaults.headers.common['Cache-Control'] = 'no-cache'
 axios.defaults.timeout = 12000
 
 // loading
-let loading = Loading.service({})
+let loading
 
 // 请求拦截
 axios.interceptors.request.use((config) => {
