@@ -376,7 +376,6 @@
 }
 .easy-page-form {
   padding: 5px;
-  background: #2c3e50;
 }
 .easy-page-pagination {
   text-align: right;
