@@ -7,3 +7,4 @@
 - 规则处理 rules
 - 存储处理 store
 - 字符类型处理 string
+- 链接类型处理 url
