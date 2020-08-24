@@ -8,3 +8,5 @@
 - 存储处理 store
 - 字符类型处理 string
 - 链接类型处理 url
+- html处理工具 html
+- 通用工具函数 tools
